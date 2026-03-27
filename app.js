@@ -27,7 +27,17 @@ const ChatbotRoutes = require("./routes/chatbot");
 const app = express();
 
 // ── DB ──
-connectDB();
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("DB connection failed:", err);
+    res.status(500).json({
+      message: "Database connection failed",
+    });
+  }
+});
 
 // ── CORS — allow localhost + Vercel frontend ──
 const allowedOrigins = [
