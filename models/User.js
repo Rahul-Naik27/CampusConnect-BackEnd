@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema(
     branch: { type: String, enum: ["CSE", "ECE", "ME", "CE", "EE", "IT", null], default: null },
     yearOfStudy: { type: String, enum: ["1st", "2nd", "3rd", "4th"], default: "1st" },
     department: { type: String, default: null },
-    isVerified: { type: Boolean, default: false }
+    isVerified: { type: Boolean, default: false },
+    savedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event', default: [] }]
   },
   { timestamps: true }
 );

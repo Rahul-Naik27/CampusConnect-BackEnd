@@ -5,7 +5,9 @@ const User = require("../models/User");
 
 router.post("/sign-up", async (req, res) => {
   try {
-    const { name, email, password, role, ...profile } = req.body || {};
+    // NOTE: `role` is intentionally NOT destructured — users can never
+    // self-assign a role. Admin promotion must be done via a privileged endpoint.
+    const { name, email, password, ...profile } = req.body || {};
     if (!name || !email || !password)
       return res.status(400).json({ message: "All fields are required" });
 
@@ -19,7 +21,7 @@ router.post("/sign-up", async (req, res) => {
       name: name.trim(),
       email: String(email).toLowerCase().trim(),
       passwordHash: password,
-      role: role === "admin" ? "admin" : "user",
+      role: "user", // always 'user' — never trust client-supplied role
       ...profile,
     });
 
@@ -74,7 +76,10 @@ router.post("/sign-in", async (req, res) => {
     if (!matched)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    const secret = process.env.JWT_SECRET || "campusconnect_secret";
+    if (!process.env.JWT_SECRET)
+      throw new Error("JWT_SECRET missing in environment");
+    const secret = process.env.JWT_SECRET;
+
     const token = jwt.sign(
       {
         id: existingUser._id.toString(),

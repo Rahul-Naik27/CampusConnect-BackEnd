@@ -23,39 +23,27 @@ const CheckinRoutes = require("./routes/checkin");
 const AdminRoutes = require("./routes/admin");
 const UserRoutes = require("./routes/userRoutes");
 const ChatbotRoutes = require("./routes/chatbot");
+const UploadRoutes = require("./routes/upload");
 
 const app = express();
 
-// ── DB ──
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    console.error("DB connection failed:", err);
-    res.status(500).json({
-      message: "Database connection failed",
-    });
-  }
-});
-
-// ── CORS — allow localhost + Vercel frontend ──
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+// ── CORS — allow localhost + any *.vercel.app subdomain ──
+const FRONTEND_URL = process.env.FRONTEND_URL;
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow requests with no origin (Postman, curl, mobile)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow any localhost port (dev)
+      if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+      // Allow all Vercel preview + production URLs (*.vercel.app)
+      if (/^https:\/\/[\w-]+\.vercel\.app$/.test(origin)) return callback(null, true);
+      // Allow the explicitly set FRONTEND_URL (e.g. custom domain)
+      if (FRONTEND_URL && origin === FRONTEND_URL) return callback(null, true);
       return callback(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true,
-  }),
+  })
 );
 
 app.use(express.json());
@@ -73,6 +61,7 @@ app.use("/api/v1/checkin", CheckinRoutes);
 app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/chatbot", ChatbotRoutes);
+app.use("/api/v1/upload", UploadRoutes);
 
 // ── Health Check ──
 app.get("/", (_req, res) => res.send("🎟️ CampusConnect API running"));
@@ -80,12 +69,22 @@ app.get("/", (_req, res) => res.send("🎟️ CampusConnect API running"));
 // ── Global Error Handler (must be last) ──
 app.use(errorHandler);
 
-// ── Only listen locally — Vercel handles this in production ──
+// ── DB — connect once at startup, then start server ──
+const PORT = process.env.PORT || 5000;
+
+// In production (Vercel), DB connection is handled per-request in api/index.js
+// In development, connect at startup and start the HTTP server
 if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server started at http://localhost:${PORT}`);
-  });
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`🚀 Server started at http://localhost:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error("❌ Failed to connect to DB:", err);
+      process.exit(1);
+    });
 }
 
 // ── Required for Vercel serverless ──

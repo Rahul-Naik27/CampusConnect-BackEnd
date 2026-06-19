@@ -1,15 +1,17 @@
+const rateLimit = require("express-rate-limit");
 const router = require("express").Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Event = require("../models/event");
 
-// Models to try in order — if one fails (quota/not found), next is tried
+// Models to try in order — confirmed available on this API key
 const MODELS = [
-  "gemini-1.5-flash-latest",
-  "gemini-1.5-flash-8b",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash-lite",
   "gemini-2.0-flash",
 ];
 
-router.post("/", async (req, res) => {
+const chatLimiter = rateLimit({ windowMs: 60 * 1000, max: 20 });
+router.post("/", chatLimiter, async (req, res) => {
   try {
     const { message } = req.body || {};
 

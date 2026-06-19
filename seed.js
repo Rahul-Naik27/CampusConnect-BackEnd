@@ -4,6 +4,10 @@
  * This creates: 1 admin, 2 users, and 4 sample events
  */
 
+const dns = require("dns");
+// Force Google's public DNS — local network DNS may not resolve Atlas SRV records
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const dotenv = require("dotenv");
